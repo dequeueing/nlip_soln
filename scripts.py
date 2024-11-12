@@ -4,6 +4,7 @@ import sys
 
 #_SERVER_MODULE_PATH = "app.server:app"
 _CHAT_SERVER_MODULE_PATH = "nlip_soln.chat.chatbot:app"
+_CHAT2_SERVER_MODULE_PATH = "nlip_soln.chat2.stateful_chatbot:app"
 _INTEGRATION_SERVER_MODULE_PATH = "nlip_soln.integrator.integrator:app"
 
 
@@ -33,10 +34,29 @@ _INTEGRATION_SERVER_MODULE_PATH = "nlip_soln.integrator.integrator:app"
 def start_chat_server() -> None:
     """Start the FastAPI chat server."""
     subprocess.run(
-        ["uvicorn", _CHAT_SERVER_MODULE_PATH, *compose_shared_flags()],
+        [
+            "uvicorn",
+            _CHAT_SERVER_MODULE_PATH, 
+            *compose_shared_flags(),
+            "--port", os.environ.get("PORT", "8004"),
+            "--reload",
+        ],
         check=True,
     )
 
+def start_stateful_chat_server() -> None:
+    """Start the FastAPI stateful chat server."""
+    subprocess.run(
+        [
+            "uvicorn",
+            _CHAT2_SERVER_MODULE_PATH, 
+            *compose_shared_flags(),
+            "--port", os.environ.get("PORT", "8006"),
+            "--reload",
+
+        ],
+        check=True,
+    )
 
 def start_integration_server() -> None:
     """Start the FastAPI integration server."""
@@ -45,6 +65,7 @@ def start_integration_server() -> None:
             "uvicorn",
             _INTEGRATION_SERVER_MODULE_PATH,
             *compose_shared_flags(),
+            "--port", os.environ.get("PORT", "8008"),
             "--reload",
         ],
         check=True,
@@ -53,4 +74,4 @@ def start_integration_server() -> None:
 
 def compose_shared_flags() -> list[str]:
     """Compose shared command-line flags for Uvicorn."""
-    return ["--host", "0.0.0.0", "--port", os.environ.get("PORT", "8006")]
+    return ["--host", "0.0.0.0"]

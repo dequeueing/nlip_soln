@@ -26,8 +26,14 @@ To set up the Python project, create a virtual environment using the following c
 
 Once the Python environment is set up, you can run the server.
 
+## Running the Ollama Servers. 
+
+**Note:** This solution assumes that you have an Ollama Server running and properly configured. You can see the directions for running the Ollama server at ollama.com .The default configuration is an ollama server running a the local machine using granite3-moe model. 
+
+The README in individual solutions describe how to configure the solution. 
+
 ## Running the Chatbot Server
-**Note:** This solution assumes that you have an Ollama Server running and properly configured. For more details, please see the README.md in the solutions directory.
+
 
 You can start the chat server with:
     ```bash

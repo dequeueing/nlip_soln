@@ -17,4 +17,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 start-chat = "scripts:start_chat_server"
+start-chat2 = "scripts:start_stateful_chat_server"
 start-integration = "scripts:start_integration_server"

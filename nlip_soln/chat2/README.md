@@ -1,6 +1,7 @@
 # Chatbot Proxy 
 
-This provides an implementation of the fastapi application which acts like a front-end to an existing LLM Service. 
+This provides an implementation of the fastapi application which acts like a front-end to an existing LLM Service to perform a stateful chat.
+The system exercises the token format message within the NLIP Protocol.  
 
 The system supports a configuration of 
 
