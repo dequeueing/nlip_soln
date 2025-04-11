@@ -34,20 +34,30 @@ The README in individual solutions describe how to configure the solution.
 
 ## Running the Chatbot Server
 
+Start the chat server with:
 
-You can start the chat server with:
-    ```bash
-    poetry run start-chat
-    ```
+```bash
+poetry run start-chat
+```
 
-To start chat with specific model
-    ```bash
-    CHAT_MODEL=llama2 poetry run start-chat
-    ```
+To start the chat server with a specific model (e.g., `llama2`):
 
-## Running the integration server 
-    ```bash
-    poetry run start-integration
-    ```
+```bash
+CHAT_MODEL=llama2 poetry run start-chat
+```
 
+## Running the Integration Server
 
+Start the integration server with:
+
+```bash
+poetry run start-integration
+```
+
+## Using MCP on the Server Side
+
+Start the MCP server with:
+
+```bash
+poetry run start-mcp
+```
