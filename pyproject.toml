@@ -9,6 +9,9 @@ readme = "README.md"
 python = "^3.10"
 fastapi = {extras = ["standard"], version = "^0.115.4"}
 nlip-server = "^0.1.0"
+mcp = "^1.6.0"
+ollama = "^0.4.7"
+black = "^25.1.0"
 
 
 [build-system]
@@ -18,5 +21,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 start-chat = "scripts:start_chat_server"
 start-chat2 = "scripts:start_stateful_chat_server"
+start-mcp = "scripts:start_mcp"
 start-integration = "scripts:start_integration_server"
 start-echo = "scripts:start_echo_server"
