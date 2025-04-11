@@ -1,4 +1,11 @@
-# MCP Client & Server Setup
+
+**# Powered by MCP**
+
+This demo showcases the integration of both the MCP client and server within a single NLIP server.  
+Message exchange follows the formats defined by NLIP.
+
+
+![NLIP MCP Architecture](./NLIP_MCP.jpg)
 
 ## Prerequisites
 - Python 3.x

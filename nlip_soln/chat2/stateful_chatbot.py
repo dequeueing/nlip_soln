@@ -5,7 +5,7 @@ import time
 
 from nlip_server import server
 from nlip_sdk import nlip
-from nlip_soln.genai  import StatefulGenAI
+from nlip_soln.genai import StatefulGenAI
 
 
 class ChatApplication(server.NLIP_Application):
@@ -20,25 +20,24 @@ class ChatApplication(server.NLIP_Application):
         return None
 
     def create_session(self) -> server.NLIP_Session:
-        return ChatSession(host=self.host, port=self.port, model=self.model, app = self)
-    
-    def retrieve_session_data(self, correlator): 
+        return ChatSession(host=self.host, port=self.port, model=self.model, app=self)
+
+    def retrieve_session_data(self, correlator):
         answer = self.session_dict.get(correlator, None)
-        self.touched[correlator]=time.time()
+        self.touched[correlator] = time.time()
         return answer
-    
+
     def store_session_data(self, correlator, session_data):
         self.session_dict[correlator] = session_data
-        self.touched[correlator]=time.time()
-    
+        self.touched[correlator] = time.time()
+
     def purge_old(self):
         now = time.time()
         for x in self.touched.keys():
-            if (now - self.touched[x] > 3600):
+            if now - self.touched[x] > 3600:
                 # Data has not been touched for an hour - can be removed.
                 self.touched.pop(x, None)
                 self.session_dict.pop(x, None)
-
 
 
 class ChatSession(server.NLIP_Session):
@@ -51,31 +50,40 @@ class ChatSession(server.NLIP_Session):
 
     def start(self):
         logger = self.get_logger()
-        #self.app.store_session_data(self.session_id, StatefulGenAI(self.host, self.port, self.model))
-        
 
-    def execute(self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
+    def execute(
+        self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage
+    ) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
         logger = self.get_logger()
 
         text = nlip.nlip_extract_text(msg)
-        correlators = nlip.nlip_extract_field_list(msg,nlip.AllowedFormats.token)
-        correlator = ''
+        correlators = nlip.nlip_extract_field_list(msg, nlip.AllowedFormats.token)
+        correlator = ""
         chat_server = None
         if len(correlators) == 0:
             correlator = str(uuid.uuid4())
         else:
             correlator = str(correlators[0])
         chat_server = self.app.retrieve_session_data(correlator)
-        if chat_server is None: 
+        if chat_server is None:
             chat_server = StatefulGenAI(self.host, self.port, self.model)
             self.app.store_session_data(correlator, chat_server)
- 
+
         response = chat_server.chat(text)
-        submsg = nlip.NLIP_SubMessage(format=nlip.AllowedFormats.token, subformat='correlator', content=correlator)
-        response = nlip.NLIP_Message(control=False, format=nlip.AllowedFormats.text,subformat='English',content=response, submessages=[submsg])
+        submsg = nlip.NLIP_SubMessage(
+            format=nlip.AllowedFormats.token, subformat="correlator", content=correlator
+        )
+        response = nlip.NLIP_Message(
+            control=False,
+            format=nlip.AllowedFormats.text,
+            subformat="English",
+            content=response,
+            submessages=[submsg],
+        )
         return response
 
     def stop(self):
         self.app.purge_old()
+
 
 app = server.setup_server(ChatApplication())

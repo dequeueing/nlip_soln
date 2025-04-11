@@ -1,4 +1,9 @@
-from nlip_sdk.nlip import NLIP_Message, NLIP_BasicMessage, nlip_extract_text, nlip_encode_text
+from nlip_sdk.nlip import (
+    NLIP_Message,
+    NLIP_BasicMessage,
+    nlip_extract_text,
+    nlip_encode_text,
+)
 
 from nlip_soln.genai import SimpleGenAI
 from nlip_server import server
@@ -32,7 +37,9 @@ class IntegratorSession(server.NLIP_Session):
             x[cfg.SERVER_NAME]: self.create_server(x) for x in self.server_cfg
         }
 
-    def execute(self, msg: NLIP_Message | NLIP_BasicMessage) -> NLIP_Message | NLIP_BasicMessage:
+    def execute(
+        self, msg: NLIP_Message | NLIP_BasicMessage
+    ) -> NLIP_Message | NLIP_BasicMessage:
         question = nlip_extract_text(msg)
         responses = dict()
         for x in self.server_dict.keys():

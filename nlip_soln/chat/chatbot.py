@@ -3,7 +3,7 @@ import os
 
 from nlip_server import server
 from nlip_sdk import nlip
-from nlip_soln.genai  import SimpleGenAI
+from nlip_soln.genai import SimpleGenAI
 
 
 class ChatApplication(server.NLIP_Application):
@@ -30,7 +30,9 @@ class ChatSession(server.NLIP_Session):
         logger = self.get_logger()
         self.chat_server = SimpleGenAI(self.host, self.port)
 
-    def execute(self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
+    def execute(
+        self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage
+    ) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
         logger = self.get_logger()
         text = nlip.nlip_extract_text(msg)
         response = self.chat_server.generate(self.model, text)

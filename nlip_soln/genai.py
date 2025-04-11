@@ -1,14 +1,14 @@
 """
-The genAI interface defines a way to interact with any genAI model in the raw. 
+The genAI interface defines a way to interact with any genAI model in the raw.
 
-GenAI models can support the following interfaces: 
+GenAI models can support the following interfaces:
 
-1. Given a prompt template and a template value, return a 
+1. Given a prompt template and a template value, return a
 response to that template prompt
 
-2. Given a prompt template, generate the embedding for that prompt. 
+2. Given a prompt template, generate the embedding for that prompt.
 
-3. An interactive chat interface -- 
+3. An interactive chat interface --
 
 """
 
@@ -52,7 +52,6 @@ class OllamaClient(GenAI):
         data = kwargs
         data.update(priority_data)
         resp = httpx.post(url, json=data, timeout=120.0)
-        #print(f'Calling Ollama with {data}')
         return resp.raise_for_status().json()
 
     def generate(self, prompt: str, **kwargs) -> str:
@@ -67,10 +66,8 @@ class OllamaClient(GenAI):
         return results["embedding"]
 
     def chat(self, this_message, history=list(), **kwargs):
-        #print(f'Invoked with history {history}')
         llama_message = history + [this_message]
         data = {"model": self.model, "messages": llama_message, "stream": False}
-        #print(f'Within chat function: {data}')
         results = self._base_httpx_call("chat", data, **kwargs)
         return results.get("message", None)
 
@@ -112,11 +109,10 @@ class StatefulGenAI:
     ):
         self.server = OllamaClient(host=host, port=port, model=model)
         self.history = list()
-        #print(f'Init function on StatefulGenAI is called!!')
 
     def chat(self, message: str):
         this_message = {"role": "user", "content": message}
-        response = self.server.chat(this_message, history = self.history)
+        response = self.server.chat(this_message, history=self.history)
         self.history.append(this_message)
         self.history.append(response)
         return response.get("content")
