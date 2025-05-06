@@ -8,10 +8,10 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 fastapi = {extras = ["standard"], version = "^0.115.4"}
-nlip-server = "^0.1.0"
 mcp = "^1.6.0"
 ollama = "^0.4.7"
 black = "^25.1.0"
+nlip-server = {path = "../nlip_server", develop = true}
 
 
 [build-system]

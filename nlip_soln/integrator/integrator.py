@@ -1,8 +1,6 @@
 from nlip_sdk.nlip import (
     NLIP_Message,
-    NLIP_BasicMessage,
-    nlip_extract_text,
-    nlip_encode_text,
+    NLIP_Factory
 )
 
 from nlip_soln.genai import SimpleGenAI
@@ -38,9 +36,8 @@ class IntegratorSession(server.NLIP_Session):
         }
 
     def execute(
-        self, msg: NLIP_Message | NLIP_BasicMessage
-    ) -> NLIP_Message | NLIP_BasicMessage:
-        question = nlip_extract_text(msg)
+        self, msg: NLIP_Message) -> NLIP_Message :
+        question = msg.extract_text()
         responses = dict()
         for x in self.server_dict.keys():
             try:
@@ -50,7 +47,7 @@ class IntegratorSession(server.NLIP_Session):
             except Exception as e:
                 print(f"Exception when getting answer from server {x}\n -- {e}")
         response = self.voted_response(question, responses)
-        return nlip_encode_text(response)
+        return NLIP_Factory.create_text(response)
 
     def stop(self):
         self.server_cfg = list()

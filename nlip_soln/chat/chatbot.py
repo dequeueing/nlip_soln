@@ -6,7 +6,7 @@ from nlip_sdk import nlip
 from nlip_soln.genai import SimpleGenAI
 
 
-class ChatApplication(server.NLIP_Application):
+class ChatApplication(server.SafeApplication):
     def startup(self):
         self.model = os.environ.get("CHAT_MODEL", "granite3-moe")
         self.host = os.environ.get("CHAT_HOST", "localhost")
@@ -27,20 +27,17 @@ class ChatSession(server.NLIP_Session):
         self.model = model
 
     def start(self):
-        logger = self.get_logger()
         self.chat_server = SimpleGenAI(self.host, self.port)
 
     def execute(
-        self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage
-    ) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
-        logger = self.get_logger()
-        text = nlip.nlip_extract_text(msg)
+        self, msg: nlip.NLIP_Message
+    ) -> nlip.NLIP_Message:
+        text = msg.extract_text()
         response = self.chat_server.generate(self.model, text)
-        return nlip.nlip_encode_text(response)
+        return nlip.NLIP_Factory.create_text(response)
 
     def stop(self):
         self.server = None
-        logger = self.get_logger()
 
 
 app = server.setup_server(ChatApplication())

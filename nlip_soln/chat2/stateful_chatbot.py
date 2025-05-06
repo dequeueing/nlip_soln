@@ -49,38 +49,24 @@ class ChatSession(server.NLIP_Session):
         self.app = app
 
     def start(self):
-        logger = self.get_logger()
+        self.set_correlator()
 
-    def execute(
-        self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage
-    ) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
-        logger = self.get_logger()
+    def execute(self, msg: nlip.NLIP_Message) -> nlip.NLIP_Message:
 
-        text = nlip.nlip_extract_text(msg)
-        correlators = nlip.nlip_extract_field_list(msg, nlip.AllowedFormats.token)
-        correlator = ""
+        text = msg.extract_text()
+        correlator = msg.extract_conversation_token()
         chat_server = None
-        if len(correlators) == 0:
-            correlator = str(uuid.uuid4())
-        else:
-            correlator = str(correlators[0])
+        if correlator is None:
+            correlator = self.get_correlator()
         chat_server = self.app.retrieve_session_data(correlator)
         if chat_server is None:
             chat_server = StatefulGenAI(self.host, self.port, self.model)
             self.app.store_session_data(correlator, chat_server)
 
         response = chat_server.chat(text)
-        submsg = nlip.NLIP_SubMessage(
-            format=nlip.AllowedFormats.token, subformat="correlator", content=correlator
-        )
-        response = nlip.NLIP_Message(
-            control=False,
-            format=nlip.AllowedFormats.text,
-            subformat="English",
-            content=response,
-            submessages=[submsg],
-        )
-        return response
+        response_msg = nlip.NLIP_Factory.create_text(response)
+        response_msg.add_conversation_token(correlator)
+        return response_msg
 
     def stop(self):
         self.app.purge_old()

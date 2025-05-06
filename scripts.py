@@ -15,7 +15,7 @@ soln_config = {
     "echo": ("nlip_soln.echo.echo:app", "8002"),
     "chat": ("nlip_soln.chat.chatbot:app", "8004"),
     "stateful_chat": ("nlip_soln.chat2.stateful_chatbot:app", "8006"),
-    "integrator": ("nlip_soln.chat2.stateful_chatbot:app", "8008"),
+    "integrator": ("nlip_soln.integrator.integrator:app", "8008"),
     "mcp": ("nlip_soln.mcp.mcp:app", "8010"),
 }
 
@@ -103,7 +103,7 @@ def start_mcp() -> None:
 
 
 def start_echo_server() -> None:
-    """Start the FastAPI integration server."""
+    """Start the FastAPI Echo server."""
     subprocess.run(
         [
             "uvicorn",
