@@ -1,6 +1,7 @@
 from multiprocessing import get_logger
 import os
 
+from nlip_sdk.nlip import NLIP_Factory
 from nlip_server import server
 from nlip_sdk import nlip
 
@@ -38,15 +39,15 @@ class ChatSession(server.NLIP_Session):
             await self.client.cleanup()
 
     async def execute(
-        self, msg: nlip.NLIP_Message | nlip.NLIP_BasicMessage
-    ) -> nlip.NLIP_Message | nlip.NLIP_BasicMessage:
+        self, msg: nlip.NLIP_Message
+    ) -> nlip.NLIP_Message:
         logger = self.get_logger()
-        text = nlip.nlip_extract_text(msg)
+        text = msg.extract_text()
 
         try:
             response = await self.client.process_query(text)
             logger.info(f"Response : {response}")
-            return nlip.nlip_encode_text(response)
+            return NLIP_Factory.create_text(response)
         except Exception as e:
             logger.error(f"Exception {e}")
             return None
