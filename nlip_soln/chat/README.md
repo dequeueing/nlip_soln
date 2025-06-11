@@ -14,3 +14,15 @@ The environmental variables are:
 CHAT_HOST: The host where the LLM Service is running. Default localhost 
 CHAT_PORT: The port where LLM Service is running. Default is 11434
 CHAT_MODEL: The model used by the LLM Service. Default is granite3-moe. 
+
+# Client command to send
+
+```bash
+curl -X POST http://localhost:8004/nlip/ \
+-H "Content-Type: application/json" \
+-d '{
+  "format": "text",
+  "subformat": "english",
+  "content": "Who are you?"
+}'
+```
