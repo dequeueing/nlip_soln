@@ -31,7 +31,8 @@ class ChatSession(server.NLIP_Session):
         try:
             logger.info(f"Connecting to the MCP server...")
             await self.client.connect_to_server(
-                "nlip_soln/mcp/server/weather/weather.py"
+                # "nlip_soln/mcp/server/weather/weather.py"
+                "nlip_soln/mcp/server/hotel/hotel.py"
             )
             logger.info(f"Connected.")
         except Exception as e:
@@ -43,6 +44,9 @@ class ChatSession(server.NLIP_Session):
     ) -> nlip.NLIP_Message:
         logger = self.get_logger()
         text = msg.extract_text()
+        
+        
+        # TODO: add a PII detection tool to detect the text.
 
         try:
             response = await self.client.process_query(text)
