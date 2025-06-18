@@ -40,3 +40,24 @@ uv run client.py ../mcp-server/weather/weather.py
 ```
 
 
+# Client command to send
+
+```bash
+curl -X POST http://localhost:8010/nlip/ \
+-H "Content-Type: application/json" \
+-d '{
+  "format": "text",
+  "subformat": "english",
+  "content": "Who are you?"
+}'
+```
+
+```bash
+curl -X POST http://localhost:8010/nlip/ \
+-H "Content-Type: application/json" \
+-d '{
+  "format": "text",
+  "subformat": "english",
+  "content": "What are the weather will be like for Indiana Bloomington?"
+}'
+```

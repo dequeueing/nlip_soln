@@ -43,11 +43,11 @@ class MCPClient:
         print("\nConnected to server with tools:", [tool.name for tool in tools])
 
     async def process_query(self, query: str) -> str:
-        print(f"Processing query")
+        # print(f"Processing query")
         messages = [{"role": "user", "content": query}]
 
         response = await self.session.list_tools()
-        print(f"Process query tools {response}")
+        # print(f"Process query tools {response}")
         available_tools = [
             {
                 "type": "function",
@@ -59,11 +59,14 @@ class MCPClient:
             }
             for tool in response.tools
         ]
-
+        
         response = self.ollama.chat(
-            model="granite3.2:2b", messages=messages, tools=available_tools
+            model="llama3.1", messages=messages, tools=available_tools
         )
         final_text = []
+
+        # print(f"Response from ollama")
+        # print(response)
 
         assistant_message_content = response.message.content
         final_text.append(assistant_message_content)
@@ -73,6 +76,9 @@ class MCPClient:
                 tool_name = tool_call.function.name
                 tool_args = tool_call.function.arguments
                 result = await self.session.call_tool(tool_name, tool_args)
+                
+                # print(f"Debug: tool call result: {result}")
+                
                 final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
 
                 tool_use_id = f"{tool_name}_{hash(str(tool_args))}"
@@ -87,11 +93,13 @@ class MCPClient:
                     }
                 )
 
-                messages.append({"role": "user", "content": str(result.content)})
+                messages.append({"role": "tool", "content": str(result.content)})
 
                 response = self.ollama.chat(
-                    model="granite3.2:2b", messages=messages, tools=available_tools
+                    model="llama3.1", messages=messages
                 )
+                
+                # print(f"Response with tool call from ollama: {response}")
 
                 final_text.append(response.message.content)
 
@@ -119,13 +127,10 @@ class MCPClient:
 
 
 async def main():
-    if len(sys.argv) < 2:
-        print("Usage: python client.py <path_to_server_script>")
-        sys.exit(1)
-
     client = MCPClient()
     try:
-        await client.connect_to_server(sys.argv[1])
+        server_script_path = "/home/exouser/nlip_soln/nlip_soln/mcp/server/weather/weather.py"
+        await client.connect_to_server(server_script_path)
         await client.chat_loop()
     finally:
         await client.cleanup()
