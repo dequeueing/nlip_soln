@@ -25,6 +25,8 @@ class ChatApplication(server.NLIP_Application):
 class ChatSession(server.NLIP_Session):
 
     def __init__(self, client: MCPClient):
+        # Framework will handle PII detection automatically
+        super().__init__()  # This now includes optional PII setup
         self.client = client
 
     async def start(self):
@@ -45,7 +47,7 @@ class ChatSession(server.NLIP_Session):
         logger = self.get_logger()
         text = msg.extract_text()
         
-        
+        # Framework handles PII automatically if enabled
 
         try:
             response = await self.client.process_query(text)
