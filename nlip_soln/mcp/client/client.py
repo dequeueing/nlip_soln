@@ -7,7 +7,7 @@ from mcp.client.stdio import stdio_client
 
 import ollama
 from dotenv import load_dotenv
-from detector import PIIDetector
+from .detector import PIIDetector
 
 load_dotenv()
 
@@ -178,8 +178,8 @@ class MCPClient:
 async def main():
     client = MCPClient()
     try:
-        # server_script_path = "/home/exouser/nlip_soln/nlip_soln/mcp/server/weather/weather.py"
-        server_script_path = "/home/exouser/nlip_soln/nlip_soln/mcp/server/hotel/hotel.py"
+        server_script_path = "/home/exouser/nlip_soln/nlip_soln/mcp/server/weather/weather.py"
+        # server_script_path = "/home/exouser/nlip_soln/nlip_soln/mcp/server/hotel/hotel.py"
         await client.connect_to_server(server_script_path)
         await client.chat_loop()
     finally:
