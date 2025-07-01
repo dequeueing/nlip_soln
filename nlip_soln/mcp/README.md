@@ -61,3 +61,13 @@ curl -X POST http://localhost:8010/nlip/ \
   "content": "What are the weather will be like for Indiana Bloomington?"
 }'
 ```
+
+```bash
+curl -X POST http://localhost:8010/nlip/ \
+-H "Content-Type: application/json" \
+-d '{
+  "format": "text",
+  "subformat": "english",
+  "content": "What is the weather in Bloomington, Indiana? My name is John Doe, email john.doe@example.com, SSN 123-45-6789."
+}'
+```

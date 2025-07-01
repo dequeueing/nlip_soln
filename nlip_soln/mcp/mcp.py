@@ -2,10 +2,12 @@ from multiprocessing import get_logger
 import os
 
 from nlip_sdk.nlip import NLIP_Factory
-from nlip_server import server
 from nlip_sdk import nlip
+from nlip_server.nlip_server import server 
 
 from .client.client import MCPClient
+
+print(f"file for nlip_sdk: {nlip.__file__}")
 
 
 logger = get_logger()
