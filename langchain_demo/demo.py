@@ -1,12 +1,14 @@
 import asyncio
+import os
 import httpx
 from typing import Any, Dict, List, Optional
 from contextlib import AsyncExitStack
+import os
 
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_core.callbacks import BaseCallbackHandler
 
@@ -194,9 +196,15 @@ class LangChainChatSession(server.NLIP_Session):
         try:
             print("Initializing LangChain components...")
             
-            # Initialize Ollama model
-            self.llm = ChatOllama(
-                model="llama3.1",
+            # Check for API key
+            if not os.getenv("DASHSCOPE_API_KEY"):
+                raise ValueError("DASHSCOPE_API_KEY environment variable is required. Get your key from https://dashscope.aliyun.com/")
+            
+            # Initialize Qwen model via OpenAI-compatible API
+            self.llm = ChatOpenAI(
+                api_key=os.getenv("DASHSCOPE_API_KEY"),
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", 
+                model="qwen-plus",  # Much stronger than llama3.1!
                 temperature=0.7,
                 callbacks=[StreamingCallbackHandler()]
             )
@@ -269,8 +277,20 @@ async def standalone_demo():
     print("- Quit: 'quit' or 'exit'")
     print()
     
+    # Check for API key
+    if not os.getenv("DASHSCOPE_API_KEY"):
+        print("❌ ERROR: DASHSCOPE_API_KEY environment variable is required!")
+        print("Get your API key from: https://dashscope.aliyun.com/")
+        print("Set it with: export DASHSCOPE_API_KEY='your-key-here'")
+        return
+    
     # Initialize LangChain components
-    llm = ChatOllama(model="llama3.1", temperature=0.7)
+    llm = ChatOpenAI(
+        api_key=os.getenv("DASHSCOPE_API_KEY"),
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", 
+        model="qwen-plus",  # Much stronger than llama3.1!
+        temperature=0.7,
+    )
     
     tools = [
         get_weather_alerts,

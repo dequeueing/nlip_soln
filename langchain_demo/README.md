@@ -13,7 +13,7 @@ This demo showcases how to use **LangChain** to achieve the same functionality a
 ### LangChain Version  
 - Uses LangChain agents and tools
 - Tools defined as LangChain `@tool` decorators
-- Ollama integration via `ChatOllama`
+- **Qwen integration via OpenAI-compatible API**
 - Same NLIP message handling
 
 ## Features
@@ -29,7 +29,7 @@ This demo showcases how to use **LangChain** to achieve the same functionality a
 
 ## Prerequisites
 - Python 3.8+
-- Ollama CLI with `llama3.1` model
+- **Qwen API Key** from Alibaba Cloud DashScope
 - NLIP SDK (for server mode)
 
 ## Setup
@@ -40,10 +40,12 @@ cd langchain_demo
 pip install -r requirements.txt
 ```
 
-### 2. Run Ollama Server
+### 2. Set up Qwen API Key
 ```bash
-ollama run llama3.1
+export DASHSCOPE_API_KEY="your-qwen-api-key-here"
 ```
+
+Get your API key from: https://dashscope.aliyun.com/
 
 ## Usage Options
 
@@ -60,7 +62,7 @@ This runs an interactive chat interface where you can test all tools:
 
 ### Option 2: NLIP Server Mode (Same as MCP)
 ```bash
-poetry run uvicorn langchain_demo.demo:app --host 0.0.0.0 --port 8012 --reload
+NLIP_PII_ENABLED=true poetry run uvicorn langchain_demo.demo:app --host 0.0.0.0 --port 8012 --reload
 ```
 
 Then use the same curl commands as the MCP version:
@@ -76,12 +78,22 @@ curl -X POST http://localhost:8012/nlip/ \
 ```
 
 ```bash
-curl -X POST http://localhost:8010/nlip/ \
+curl -X POST http://localhost:8012/nlip/ \
 -H "Content-Type: application/json" \
 -d '{
   "format": "text",
   "subformat": "english",
   "content": "What will the weather be like for Indiana Bloomington?"
+}'
+```
+
+```bash
+curl -X POST http://localhost:8012/nlip/ \
+-H "Content-Type: application/json" \
+-d '{
+  "format": "text",
+  "subformat": "english",
+  "content": "My name is John Doe. My email is john.doe@example.com. My phone number is 123-456-7890. My address is 123 Main St, Anytown, USA. What will the weather be like for Indiana Bloomington?"
 }'
 ```
 
@@ -91,7 +103,7 @@ curl -X POST http://localhost:8010/nlip/ \
 |--------|-------------|-------------------|
 | **Tool Definition** | MCP `@mcp.tool()` decorators | LangChain `@tool` decorators |
 | **Agent Framework** | Manual tool calling logic | Built-in `AgentExecutor` |
-| **Model Integration** | Direct Ollama API calls | `ChatOllama` wrapper |
+| **Model Integration** | Direct Ollama API calls | **Qwen via OpenAI-compatible API** |
 | **Prompt Management** | String concatenation | `ChatPromptTemplate` |
 | **Tool Orchestration** | Custom message handling | Agent automatically decides |
 | **Streaming** | Not implemented | Built-in with callbacks |
