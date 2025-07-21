@@ -4,6 +4,7 @@ import httpx
 from typing import Any, Dict, List, Optional
 from contextlib import AsyncExitStack
 import os
+import json
 
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -17,6 +18,47 @@ from nlip_sdk import nlip
 from nlip_server.nlip_server import server
 
 
+# NLIP Client for inter-agent communication
+class NLIPClient:
+    """Client for sending NLIP messages to other agents using proper NLIP SDK."""
+    
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip('/')
+        
+    async def send_message(self, content: str, format_type: str = "text", subformat: str = "english") -> str:
+        """Send a NLIP message to another agent and return the response."""
+        url = f"{self.base_url}/nlip/"
+        
+        # Create NLIP message using the SDK
+        nlip_message = NLIP_Factory.create_text(content)
+        
+        # Serialize the NLIP message to JSON (the message has a model_dump method)
+        message_data = nlip_message.model_dump()
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, 
+                    json=message_data,
+                    headers={"Content-Type": "application/json"},
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                result_data = response.json()
+                
+                # Parse the response back into a NLIP message and extract text
+                # The response should be a NLIP message in JSON format
+                response_message = nlip.NLIP_Message.model_validate(result_data)
+                return response_message.extract_text()
+                
+            except Exception as e:
+                return f"Error communicating with agent at {self.base_url}: {str(e)}"
+
+
+# Configuration for the LlamaIndex server
+LLAMAINDEX_SERVER_URL = "http://localhost:8013"
+
+
 class StreamingCallbackHandler(BaseCallbackHandler):
     """Callback handler for streaming responses."""
     
@@ -24,150 +66,40 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         print(token, end="", flush=True)
 
 
-# Weather Tools (equivalent to MCP weather server)
+# Delegating Weather Tools (delegate to LlamaIndex server via NLIP)
 @tool
 async def get_weather_alerts(state: str) -> str:
-    """Get weather alerts for a US state.
+    """Get weather alerts for a US state by delegating to LlamaIndex server.
     
     Args:
         state: Two-letter US state code (e.g. CA, NY, IN)
     """
-    NWS_API_BASE = "https://api.weather.gov"
-    USER_AGENT = "langchain-weather-demo/1.0"
+    print(f"\n🔄 [LangChain] Delegating weather alerts query for {state} to LlamaIndex server...")
     
-    headers = {"User-Agent": USER_AGENT, "Accept": "application/geo+json"}
-    url = f"{NWS_API_BASE}/alerts/active/area/{state.upper()}"
+    client = NLIPClient(LLAMAINDEX_SERVER_URL)
+    query = f"Get weather alerts for {state}"
     
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, headers=headers, timeout=30.0)
-            response.raise_for_status()
-            data = response.json()
-            
-            if not data or "features" not in data:
-                return "Unable to fetch alerts or no alerts found."
-
-            if not data["features"]:
-                return f"No active weather alerts for {state.upper()}."
-
-            alerts = []
-            for feature in data["features"]:
-                props = feature["properties"]
-                alert = f"""
-Event: {props.get('event', 'Unknown')}
-Area: {props.get('areaDesc', 'Unknown')}
-Severity: {props.get('severity', 'Unknown')}
-Description: {props.get('description', 'No description available')}
-Instructions: {props.get('instruction', 'No specific instructions provided')}
-"""
-                alerts.append(alert)
-            
-            return "\n---\n".join(alerts)
-            
-        except Exception as e:
-            return f"Error fetching weather alerts: {str(e)}"
+    response = await client.send_message(query)
+    print(f"✅ [LangChain] Weather alerts response received from LlamaIndex server\n")
+    return response
 
 
 @tool
 async def get_weather_forecast(latitude: float, longitude: float) -> str:
-    """Get weather forecast for a location.
+    """Get weather forecast for a location by delegating to LlamaIndex server.
     
     Args:
         latitude: Latitude of the location
         longitude: Longitude of the location
     """
-    NWS_API_BASE = "https://api.weather.gov"
-    USER_AGENT = "langchain-weather-demo/1.0"
+    print(f"\n🔄 [LangChain] Delegating weather forecast query for ({latitude}, {longitude}) to LlamaIndex server...")
     
-    headers = {"User-Agent": USER_AGENT, "Accept": "application/geo+json"}
+    client = NLIPClient(LLAMAINDEX_SERVER_URL)
+    query = f"Get weather forecast for latitude {latitude} and longitude {longitude}"
     
-    async with httpx.AsyncClient() as client:
-        try:
-            # First get the forecast grid endpoint
-            points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
-            points_response = await client.get(points_url, headers=headers, timeout=30.0)
-            points_response.raise_for_status()
-            points_data = points_response.json()
-
-            # Get the forecast URL from the points response
-            forecast_url = points_data["properties"]["forecast"]
-            forecast_response = await client.get(forecast_url, headers=headers, timeout=30.0)
-            forecast_response.raise_for_status()
-            forecast_data = forecast_response.json()
-
-            # Format the periods into a readable forecast
-            periods = forecast_data["properties"]["periods"]
-            forecasts = []
-            for period in periods[:5]:  # Only show next 5 periods
-                forecast = f"""
-{period['name']}:
-Temperature: {period['temperature']}°{period['temperatureUnit']}
-Wind: {period['windSpeed']} {period['windDirection']}
-Forecast: {period['detailedForecast']}
-"""
-                forecasts.append(forecast)
-
-            return "\n---\n".join(forecasts)
-            
-        except Exception as e:
-            return f"Error fetching weather forecast: {str(e)}"
-
-
-@tool
-async def get_location_coordinates(city: str, state: str = "") -> str:
-    """Get latitude and longitude for a city to use with weather forecast.
-    
-    Args:
-        city: City name (e.g. "Bloomington")
-        state: State name or abbreviation (e.g. "Indiana" or "IN")
-    """
-    # Simple coordinate lookup for demo purposes
-    # In production, you'd use a geocoding service
-    locations = {
-        "bloomington,indiana": (39.1612, -86.5264),
-        "bloomington,in": (39.1612, -86.5264),
-        "indianapolis,indiana": (39.7684, -86.1581),
-        "indianapolis,in": (39.7684, -86.1581),
-        "chicago,illinois": (41.8781, -87.6298),
-        "chicago,il": (41.8781, -87.6298),
-        "new york,new york": (40.7128, -74.0060),
-        "new york,ny": (40.7128, -74.0060),
-    }
-    
-    key = f"{city.lower()},{state.lower()}" if state else city.lower()
-    
-    for location_key, coords in locations.items():
-        if key in location_key:
-            lat, lon = coords
-            return f"Coordinates for {city}, {state}: Latitude {lat}, Longitude {lon}"
-    
-    return f"Coordinates not found for {city}, {state}. Try using specific lat/lon with get_weather_forecast."
-
-
-# Hotel Tools (equivalent to MCP hotel server)
-@tool
-async def book_hotel(message: str) -> str:
-    """Book a hotel with the given message.
-    
-    Args:
-        message: The booking message or request details
-    """
-    return f"Hotel Booking Confirmation: {message}"
-
-
-@tool
-async def get_hotel_info() -> str:
-    """Get basic hotel information and services."""
-    return """Welcome to the LangChain Hotel Service! 
-    
-Available services:
-- Room booking
-- Restaurant reservations
-- Concierge services
-- Local area information
-    
-This is a demo service for testing LangChain tool integration."""
-
+    response = await client.send_message(query)
+    print(f"✅ [LangChain] Weather forecast response received from LlamaIndex server\n")
+    return response
 
 class LangChainChatApplication(server.NLIP_Application):
     """LangChain-powered chat application similar to MCP version."""
@@ -197,31 +129,29 @@ class LangChainChatSession(server.NLIP_Session):
             print("Initializing LangChain components...")
             
             # Check for API key
-            if not os.getenv("DASHSCOPE_API_KEY"):
-                raise ValueError("DASHSCOPE_API_KEY environment variable is required. Get your key from https://dashscope.aliyun.com/")
+            if not os.getenv("OPENROUTER_API_KEY"):
+                raise ValueError("OPENROUTER_API_KEY environment variable is required. Get your key from https://openrouter.ai/")
             
-            # Initialize Qwen model via OpenAI-compatible API
+            # Initialize model via OpenRouter API
             self.llm = ChatOpenAI(
-                api_key=os.getenv("DASHSCOPE_API_KEY"),
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", 
-                model="qwen-plus",  # Much stronger than llama3.1!
+                model="anthropic/claude-sonnet-4", 
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                base_url="https://openrouter.ai/api/v1",
                 temperature=0.7,
                 callbacks=[StreamingCallbackHandler()]
             )
             
-            # Define available tools
+            # Define available tools (all delegating to LlamaIndex server)
             self.tools = [
                 get_weather_alerts,
-                get_weather_forecast,
-                get_location_coordinates,
-                book_hotel,
-                get_hotel_info
+                get_weather_forecast
             ]
             
             # Create prompt template
             prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant with access to weather and hotel booking tools. "
-                          "Use the tools when needed to help users with their requests."),
+                ("system", "You are a helpful assistant with access to weather tools. "
+                          "You can get weather alerts and forecasts. "
+                          "Use the tools when needed to help users with their weather-related requests."),
                 ("human", "{input}"),
                 ("placeholder", "{agent_scratchpad}")
             ])
@@ -243,12 +173,15 @@ class LangChainChatSession(server.NLIP_Session):
         text = msg.extract_text()
         
         try:
-            print(f"Processing query: {text}")
+            print(f"\n📨 [LangChain] Processing client query: {text}")
+            print("=" * 60)
             
             # Use the agent executor to process the query
             result = await self.agent_executor.ainvoke({"input": text})
             response = result["output"]
             
+            print("=" * 60)
+            print(f"📤 [LangChain] Sending final response to client\n")
             logger.info(f"LangChain Response: {response}")
             return NLIP_Factory.create_text(response)
             
@@ -268,41 +201,37 @@ class LangChainChatSession(server.NLIP_Session):
 async def standalone_demo():
     """Run a standalone demo without NLIP integration."""
     print("=== LangChain Standalone Demo ===")
-    print("This demo showcases LangChain with the same tools as the MCP version.")
+    print("This demo showcases LangChain with weather tools delegating to LlamaIndex.")
     print("Available commands:")
     print("- Weather alerts: 'Get weather alerts for Indiana'")
     print("- Weather forecast: 'What's the weather forecast for Bloomington, Indiana?'")
-    print("- Hotel booking: 'Book a hotel room for tonight'")
-    print("- Hotel info: 'Tell me about hotel services'")
     print("- Quit: 'quit' or 'exit'")
     print()
     
     # Check for API key
-    if not os.getenv("DASHSCOPE_API_KEY"):
-        print("❌ ERROR: DASHSCOPE_API_KEY environment variable is required!")
-        print("Get your API key from: https://dashscope.aliyun.com/")
-        print("Set it with: export DASHSCOPE_API_KEY='your-key-here'")
+    if not os.getenv("OPENROUTER_API_KEY"):
+        print("❌ ERROR: OPENROUTER_API_KEY environment variable is required!")
+        print("Get your API key from: https://openrouter.ai/")
+        print("Set it with: export OPENROUTER_API_KEY='your-key-here'")
         return
     
     # Initialize LangChain components
     llm = ChatOpenAI(
-        api_key=os.getenv("DASHSCOPE_API_KEY"),
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", 
-        model="qwen-plus",  # Much stronger than llama3.1!
+        model="anthropic/claude-sonnet-4", 
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url="https://openrouter.ai/api/v1",
         temperature=0.7,
     )
     
     tools = [
         get_weather_alerts,
-        get_weather_forecast,
-        get_location_coordinates,
-        book_hotel,
-        get_hotel_info
+        get_weather_forecast
     ]
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant with access to weather and hotel booking tools. "
-                  "Use the tools when needed to help users with their requests."),
+        ("system", "You are a helpful assistant with access to weather tools. "
+                  "You can get weather alerts and forecasts. "
+                  "Use the tools when needed to help users with their weather-related requests."),
         ("human", "{input}"),
         ("placeholder", "{agent_scratchpad}")
     ])
@@ -348,5 +277,7 @@ if __name__ == "__main__":
         asyncio.run(standalone_demo())
     else:
         print("LangChain NLIP server ready!")
+        print("This server delegates tool execution to LlamaIndex server via NLIP protocol")
+        print("Make sure LlamaIndex server is running on port 8013 first!")
         print("Use 'poetry run uvicorn langchain_demo.demo:app --host 0.0.0.0 --port 8012 --reload' to start server")
         print("Or use the same curl commands as in the MCP README to test.") 

@@ -101,59 +101,6 @@ Forecast: {period['detailedForecast']}
             return f"Error fetching weather forecast: {str(e)}"
 
 
-async def get_location_coordinates(city: str, state: str = "") -> str:
-    """Get latitude and longitude for a city to use with weather forecast.
-    
-    Args:
-        city: City name (e.g. "Bloomington")
-        state: State name or abbreviation (e.g. "Indiana" or "IN")
-    """
-    # Simple coordinate lookup for demo purposes
-    # In production, you'd use a geocoding service
-    locations = {
-        "bloomington,indiana": (39.1612, -86.5264),
-        "bloomington,in": (39.1612, -86.5264),
-        "indianapolis,indiana": (39.7684, -86.1581),
-        "indianapolis,in": (39.7684, -86.1581),
-        "chicago,illinois": (41.8781, -87.6298),
-        "chicago,il": (41.8781, -87.6298),
-        "new york,new york": (40.7128, -74.0060),
-        "new york,ny": (40.7128, -74.0060),
-    }
-    
-    key = f"{city.lower()},{state.lower()}" if state else city.lower()
-    
-    for location_key, coords in locations.items():
-        if key in location_key:
-            lat, lon = coords
-            return f"Coordinates for {city}, {state}: Latitude {lat}, Longitude {lon}"
-    
-    return f"Coordinates not found for {city}, {state}. Try using specific lat/lon with get_weather_forecast."
-
-
-# Hotel Tools (equivalent to MCP hotel server)
-async def book_hotel(message: str) -> str:
-    """Book a hotel with the given message.
-    
-    Args:
-        message: The booking message or request details
-    """
-    return f"Hotel Booking Confirmation: {message}"
-
-
-async def get_hotel_info() -> str:
-    """Get basic hotel information and services."""
-    return """Welcome to the LlamaIndex Hotel Service! 
-    
-Available services:
-- Room booking
-- Restaurant reservations
-- Concierge services
-- Local area information
-    
-This is a demo service for testing LlamaIndex tool integration."""
-
-
 class LlamaIndexChatApplication(server.NLIP_Application):
     """LlamaIndex-powered chat application similar to MCP and LangChain versions."""
     
@@ -188,9 +135,9 @@ class LlamaIndexChatSession(server.NLIP_Session):
             
             # Initialize Qwen model via OpenAI-compatible API using OpenAILike
             self.llm = OpenAILike(
-                model="qwen-plus",  # Much stronger than llama3.1!
-                api_key=os.getenv("DASHSCOPE_API_KEY"),
-                api_base="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                model="anthropic/claude-sonnet-4", 
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                api_base="https://openrouter.ai/api/v1",
                 temperature=0.7,
                 # Explicitly set the context window to match Qwen's context window
                 context_window=128000,
@@ -212,21 +159,6 @@ class LlamaIndexChatSession(server.NLIP_Session):
                     name="get_weather_forecast", 
                     description="Get weather forecast for coordinates. Takes latitude and longitude as numbers."
                 ),
-                FunctionTool.from_defaults(
-                    fn=get_location_coordinates,
-                    name="get_location_coordinates",
-                    description="Get coordinates for a city. Takes city name and optional state."
-                ),
-                FunctionTool.from_defaults(
-                    fn=book_hotel,
-                    name="book_hotel",
-                    description="Book a hotel with a message. Takes a booking message string."
-                ),
-                FunctionTool.from_defaults(
-                    fn=get_hotel_info,
-                    name="get_hotel_info",
-                    description="Get information about hotel services. No parameters needed."
-                )
             ]
             
             # Create LlamaIndex FunctionAgent
@@ -234,8 +166,9 @@ class LlamaIndexChatSession(server.NLIP_Session):
                 tools=self.tools,
                 llm=self.llm,
                 verbose=True,
-                system_prompt="You are a helpful assistant with access to weather and hotel booking tools. "
-                             "Use the tools when needed to help users with their requests."
+                system_prompt="You are a helpful assistant with access to weather tools. "
+                             "You can get weather alerts and forecasts. "
+                             "Use the tools when needed to help users with their weather-related requests."
             )
             
             # Initialize context for maintaining conversation state
@@ -254,12 +187,13 @@ class LlamaIndexChatSession(server.NLIP_Session):
         text = msg.extract_text()
         
         try:
-            print(f"Processing query: {text}")
+            print(f"🔧 [LlamaIndex] Processing delegated query: {text}")
             
             # Use the LlamaIndex agent to process the query
             response = await self.agent.run(text, ctx=self.context)
             response_text = str(response)
             
+            print(f"✅ [LlamaIndex] Completed processing, returning result to LangChain")
             logger.info(f"LlamaIndex Response: {response_text}")
             return NLIP_Factory.create_text(response_text)
             
@@ -280,12 +214,10 @@ class LlamaIndexChatSession(server.NLIP_Session):
 async def standalone_demo():
     """Run a standalone demo without NLIP integration."""
     print("=== LlamaIndex Standalone Demo ===")
-    print("This demo showcases LlamaIndex with the same tools as the MCP and LangChain versions.")
+    print("This demo showcases LlamaIndex with weather tools that process delegated requests.")
     print("Available commands:")
     print("- Weather alerts: 'Get weather alerts for Indiana'")
     print("- Weather forecast: 'What's the weather forecast for Bloomington, Indiana?'")
-    print("- Hotel booking: 'Book a hotel room for tonight'")
-    print("- Hotel info: 'Tell me about hotel services'")
     print("- Quit: 'quit' or 'exit'")
     print()
     
@@ -318,29 +250,15 @@ async def standalone_demo():
             name="get_weather_forecast", 
             description="Get weather forecast for coordinates. Takes latitude and longitude as numbers."
         ),
-        FunctionTool.from_defaults(
-            fn=get_location_coordinates,
-            name="get_location_coordinates",
-            description="Get coordinates for a city. Takes city name and optional state."
-        ),
-        FunctionTool.from_defaults(
-            fn=book_hotel,
-            name="book_hotel",
-            description="Book a hotel with a message. Takes a booking message string."
-        ),
-        FunctionTool.from_defaults(
-            fn=get_hotel_info,
-            name="get_hotel_info",
-            description="Get information about hotel services. No parameters needed."
-        )
     ]
     
     agent = FunctionAgent(
         tools=tools,
         llm=llm,
         verbose=True,
-        system_prompt="You are a helpful assistant with access to weather and hotel booking tools. "
-                     "Use the tools when needed to help users with their requests."
+        system_prompt="You are a helpful assistant with access to weather tools. "
+                     "You can get weather alerts and forecasts. "
+                     "Use the tools when needed to help users with their weather-related requests."
     )
     
     context = Context(agent)
@@ -383,5 +301,6 @@ if __name__ == "__main__":
         asyncio.run(standalone_demo())
     else:
         print("LlamaIndex NLIP server ready!")
+        print("This server executes weather tools and serves requests from LangChain server via NLIP protocol")
         print("Use 'poetry run uvicorn llamaindex_demo.demo:app --host 0.0.0.0 --port 8013 --reload' to start server")
         print("Or use the same curl commands as in the MCP README to test.")

@@ -83,7 +83,7 @@ curl -X POST http://localhost:8012/nlip/ \
 -d '{
   "format": "text",
   "subformat": "english",
-  "content": "What will the weather be like for Indiana Bloomington?"
+  "content": "What will the weather be like for Indiana Bloomington tonight?"
 }'
 ```
 

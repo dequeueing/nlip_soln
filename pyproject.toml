@@ -11,7 +11,6 @@ fastapi = {extras = ["standard"], version = "^0.115.4"}
 mcp = "^1.6.0"
 ollama = "^0.4.7"
 black = "^25.1.0"
-nlip-server = {path = "../nlip_server", develop = true}
 
 
 [build-system]
